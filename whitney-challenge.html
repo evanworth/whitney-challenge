@@ -1,92 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Whitney Houston Challenge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- YouTube IFrame API -->
   <script src="https://www.youtube.com/iframe_api"></script>
+
   <style>
+    :root {
+      --primary: #f97316;
+      --primary-dark: #ea580c;
+      --bg: radial-gradient(circle at top, #0f172a 0, #020617 55%, #000 100%);
+      --text: #f9fafb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      min-height: 100vh;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      background: #0b1120;
-      color: #f9fafb;
+      background: var(--bg);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      color: var(--text);
+    }
+
+    .wrapper {
+      text-align: center;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 900px;
     }
 
     h1 {
-      margin-bottom: 1rem;
-      text-align: center;
-      font-size: 1.6rem;
+      font-size: clamp(1.9rem, 3vw, 2.3rem);
+      margin-bottom: 0.25rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      opacity: 0.85;
+      font-size: 0.95rem;
+      margin-bottom: 1.25rem;
+    }
+
+    #player-container {
+      display: inline-block;
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+      margin-bottom: 1.5rem;
+      max-width: 100%;
     }
 
     #player {
-      margin-bottom: 1.5rem;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 16 / 9;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: center;
     }
 
     button {
       cursor: pointer;
       border: none;
-      padding: 0.75rem 1.75rem;
       border-radius: 999px;
+      padding: 0.8rem 2.4rem;
       font-size: 1rem;
-      font-weight: 600;
-      background: #2563eb;
-      color: white;
-      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
-      box-shadow: 0 6px 18px rgba(37,99,235,0.5);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: var(--primary);
+      color: #111827;
+      box-shadow: 0 12px 25px rgba(249, 115, 22, 0.5);
+      transition: transform 0.1s ease, box-shadow 0.1s ease,
+        background 0.1s ease;
     }
 
     button:hover {
-      background: #1d4ed8;
+      background: var(--primary-dark);
       transform: translateY(-1px);
-      box-shadow: 0 8px 22px rgba(37,99,235,0.7);
+      box-shadow: 0 16px 35px rgba(249, 115, 22, 0.7);
     }
 
     button:active {
       transform: translateY(1px);
-      box-shadow: 0 3px 10px rgba(15,23,42,0.7);
+      box-shadow: 0 6px 15px rgba(15, 23, 42, 0.8);
+    }
+
+    .secondary-btn {
+      background: #0f172a;
+      color: #e5e7eb;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      padding-inline: 1.8rem;
+      text-transform: none;
+      letter-spacing: 0.03em;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .secondary-btn:hover {
+      background: #020617;
+    }
+
+    #countdown {
+      margin-top: 0.5rem;
+      min-height: 1.5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+
+    .status {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 0.1rem;
+    }
+
+    @media (max-width: 640px) {
+      button {
+        width: 100%;
+      }
+      .secondary-btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Whitney Houston Challenge 🎤</h1>
+  <div class="wrapper">
+    <h1>Whitney Houston Challenge 🎤</h1>
+    <div class="subtitle">
+      Click the button, wait for the countdown, and the clip jumps to
+      <strong>3:00</strong>.
+    </div>
 
-  <!-- YouTube player goes here -->
-  <div id="player"></div>
+    <div id="player-container">
+      <div id="player"></div>
+    </div>
 
-  <!-- Button to replay from the exact time -->
-  <button onclick="replayWhitney()">
-    Replay Clip from 3:00
-  </button>
+    <div class="controls">
+      <button id="startBtn">Start Whitney Challenge</button>
+      <button class="secondary-btn" id="replayBtn">Replay Clip from 3:00</button>
+      <div id="countdown"></div>
+      <div class="status" id="statusText"></div>
+    </div>
+  </div>
 
   <script>
     let player;
+    const START_TIME = 180; // 3:00
+    let playerReady = false;
 
-    // This function is called automatically by the YouTube IFrame API
+    const startBtn = document.getElementById("startBtn");
+    const replayBtn = document.getElementById("replayBtn");
+    const countdownEl = document.getElementById("countdown");
+    const statusText = document.getElementById("statusText");
+
+    // YouTube API callback
     function onYouTubeIframeAPIReady() {
-      player = new YT.Player('player', {
-        height: '360',
-        width: '640',
-        videoId: '3JWTaaS7LdU', // Whitney Houston - I Will Always Love You
+      player = new YT.Player("player", {
+        videoId: "3JWTaaS7LdU", // Whitney Houston - I Will Always Love You
         playerVars: {
-          start: 180, // 180 seconds = 3:00
-          controls: 1,
+          start: START_TIME,
           rel: 0,
+          controls: 1
+        },
+        events: {
+          onReady: onPlayerReady
         }
       });
     }
 
-    function replayWhitney() {
-      if (player && player.seekTo) {
-        player.seekTo(180, true); // jump to 3:00
-        player.playVideo();
-      }
+    function onPlayerReady() {
+      playerReady = true;
+      statusText.textContent = "Ready to go!";
     }
+
+    function runCountdownThenPlay() {
+      if (!playerReady) {
+        statusText.textContent = "Loading video… please wait a moment.";
+        return;
+      }
+
+      let count = 3;
+      countdownEl.textContent = `Starting in ${count}…`;
+      statusText.textContent = "";
+
+      // Make sure we’re at the correct moment and paused before countdown
+      player.pauseVideo();
+      player.seekTo(START_TIME, true);
+
+      const interval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          countdownEl.textContent = `Starting in ${count}…`;
+        } else {
+          clearInterval(interval);
+          countdownEl.textContent = "Go!";
+          player.seekTo(START_TIME, true);
+          player.playVideo();
+
+          // Clear message after a couple seconds
+          setTimeout(() => {
+            countdownEl.textContent = "";
+          }, 1500);
+        }
+      }, 1000);
+    }
+
+    function replayFromStart() {
+      if (!playerReady) {
+        statusText.textContent = "Video still loading…";
+        return;
+      }
+      countdownEl.textContent = "";
+      statusText.textContent = "Replaying from 3:00.";
+      player.seekTo(START_TIME, true);
+      player.playVideo();
+    }
+
+    startBtn.addEventListener("click", runCountdownThenPlay);
+    replayBtn.addEventListener("click", replayFromStart);
+
+    // Expose callback for YT API
+    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
   </script>
 </body>
 </html>
+
